@@ -80,3 +80,9 @@ per-round `metrics.csv`, adds an explicit round index, derives best-found-so-far
 aggregates across seeds. For a fair comparison, **every config in a given seed rebuilds
 its own dataset with that same seed** (identical split), and all RNGs are seeded before
 the model is built.
+
+## ICMD tabular regression
+
+The [ICMD benchmark](icmd/README.md) compares nine acquisitions with fixed held-out
+splits, paired initial seed sets, and deferred test scoring. It is an independent
+small dependency project using the local ALF core.
