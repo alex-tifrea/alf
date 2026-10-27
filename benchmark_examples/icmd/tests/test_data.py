@@ -1,8 +1,10 @@
 """Fixed-split and label-isolation checks."""
+
 import numpy as np
 import pandas as pd
 from alf_icmd.constants import FEATURES, PRIMARY
 from alf_icmd.data import ICMDataset
+
 
 def test_splits_mask_pool_and_test_and_keep_seeds_nested():
     rng = np.random.default_rng(10)
@@ -28,6 +30,7 @@ def test_splits_mask_pool_and_test_and_keep_seeds_nested():
     assert len(small.train_dataset) == 35
     assert len(small.candidate_pool) == 65
     assert validation_ids == [c.data for c in small.validation_dataset.candidates]
+
 
 def test_hidden_labels_do_not_change_splits_or_input_kernel():
     rng = np.random.default_rng(10)

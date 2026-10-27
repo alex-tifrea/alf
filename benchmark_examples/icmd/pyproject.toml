@@ -18,6 +18,7 @@ dependencies = ["alf-core",
 [project.scripts]
 alf-icmd = "alf_icmd.runner:main"
 alf-icmd-report = "alf_icmd.report:main"
+alf-icmd-skew = "alf_icmd.skew_suite:main"
 
 [build-system]
 requires = ["setuptools>=75"]

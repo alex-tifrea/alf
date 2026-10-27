@@ -1,6 +1,8 @@
 """Posterior-variance batch-selection checks."""
+
 import numpy as np
 from alf_icmd.acquisition import activation_covariance, greedy_pv
+
 
 def test_pv_matches_explicit_conditioning():
     rng = np.random.default_rng(12)

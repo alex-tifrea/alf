@@ -23,7 +23,7 @@ from threadpoolctl import threadpool_limits
 
 from alf_icmd.acquisition import Acquisition, MaskedDatasetSearch
 from alf_icmd.constants import ALF_REVISION, FEATURES, METHODS, NAMES, PRIMARY
-from alf_icmd.data import ICMDataset
+from alf_icmd.data import SKEWS, ICMDataset, seed_eligibility
 from alf_icmd.models import CommonRegressor, features
 
 
@@ -54,7 +54,7 @@ class PredictionOnlyTask(DesignTask):
 
 def run_one(job):
     """Execute one complete paired campaign and retain its acquisition audit trail."""
-    source, output, method, seed, initial, rounds, batch = job
+    source, output, method, seed, initial, rounds, batch, skew = job
     torch.set_num_threads(1)
     threadpool_limits(1)
     directory = Path(output) / "runs" / f"{method}_n{initial}_s{seed}"
@@ -64,7 +64,7 @@ def run_one(job):
     started = time.time()
     frame = pd.read_parquet(source)
     frame = frame.loc[frame[PRIMARY].notna()].reset_index(drop=True)
-    dataset = ICMDataset(frame, seed, initial)
+    dataset = ICMDataset(frame, seed, initial, seed_skew=skew)
     dataset.setup()
     scaler = StandardScaler().fit(
         features(dataset.train_dataset.candidates + dataset.candidate_pool.candidates)
@@ -122,6 +122,9 @@ def prepare(source: Path, output: Path, args):
         "numpy": np.__version__,
         "torch": torch.__version__,
     }
+    if args.seed_skew != "iid":
+        _, region = seed_eligibility(valid, args.seed_skew)
+        protocol["seed_region"] = region
     lock = output / "protocol.json"
     if lock.exists():
         assert json.loads(lock.read_text()) == protocol, (
@@ -258,7 +261,10 @@ def plot(output: Path, summary: pd.DataFrame, paired: pd.DataFrame):
         )
         handles, labels = axes[0, 0].get_legend_handles_labels()
         fig.legend(handles, labels, loc="lower center", ncol=3, frameon=False, fontsize=10)
-        fig.suptitle("ICMD yield strength · fixed splits · five paired seeds · mean ±1 SD", y=1.02)
+        protocol = json.loads((output / "protocol.json").read_text())
+        skew = protocol.get("seed_region", {}).get("skew", "iid")
+        title = SKEWS.get(skew, "IID seeds")
+        fig.suptitle(f"ICMD yield strength · {title} · five paired seeds · mean ±1 SD", y=1.02)
         fig.tight_layout(rect=(0, 0.17, 1, 1))
         fig.savefig(output / f"learning_{kind}.png", dpi=180, bbox_inches="tight")
         fig.savefig(output / f"learning_{kind}.pdf", bbox_inches="tight")
@@ -278,11 +284,21 @@ def main():
     parser.add_argument("--batch", type=int, default=50)
     parser.add_argument("--workers", type=int, default=3)
     parser.add_argument("--report-only", action="store_true")
+    parser.add_argument("--seed-skew", choices=["iid", *SKEWS], default="iid")
     args = parser.parse_args()
     if not args.report_only:
         prepare(args.source, args.output, args)
         jobs = [
-            (str(args.source), str(args.output), method, seed, initial, args.rounds, args.batch)
+            (
+                str(args.source),
+                str(args.output),
+                method,
+                seed,
+                initial,
+                args.rounds,
+                args.batch,
+                args.seed_skew,
+            )
             for initial in args.initial_sizes
             for seed in args.seeds
             for method in args.methods
