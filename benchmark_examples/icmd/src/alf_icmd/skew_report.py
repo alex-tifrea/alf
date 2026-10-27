@@ -178,8 +178,11 @@ def main():
         .first()
         .reset_index()
     )
+    best["scenario_order"] = best["skew"].map({name: i for i, name in enumerate(SKEWS)})
+    best = best.sort_values(["scenario_order", "initial"])
+    uniform_wins = int(best.method.eq("uniform").sum())
     best_table = pd.DataFrame({
-        "Seed region": best.skew.map(SKEWS),
+        "Seed region": best["skew"].map(SKEWS),
         "Initial labels": best.initial,
         "Lowest curve error": best.method.map(NAMES),
         "Curve gain vs uniform (%)": best.aulc_gain_percent.round(2),
@@ -191,7 +194,7 @@ def main():
     sections = []
     for skew, label in SKEWS.items():
         region = json.loads((output / skew / "protocol.json").read_text())["seed_region"]
-        table = summary.loc[summary.skew.eq(skew)].copy()
+        table = summary.loc[summary["skew"].eq(skew)].copy()
         table["method"] = table.method.map(NAMES)
         display = table[
             [
@@ -222,7 +225,7 @@ def main():
         .unstack()
         .reset_index()
     )
-    penalty_table["skew"] = penalty_table.skew.map(SKEWS)
+    penalty_table["skew"] = penalty_table["skew"].map(SKEWS)
     penalty_table.columns = [
         "Seed region",
         "Initial labels",
@@ -246,7 +249,7 @@ def main():
 <p>Four input-only seed skews × three initial sizes × five paired seeds × nine acquisition methods: <strong>540 campaigns and 5,940 round evaluators</strong>.
 The original <a href="{args.iid_url}">IID report is preserved separately</a>.</p>
 <p>Only the initial labeled-set distribution changes. Each run still has the full697-point training pool, fixed52 early-stopping points, fixed53 calibration points, and fixed200 test points. Ten rounds acquire50 points each, starting from25,50, or100 labels.</p>
-<h2>Comparison with uniform under the same skew</h2><img src="skew_acquisition_gains.png" alt="Acquisition gains by skew and seed size">
+<p><strong>Uniform has the lowest average curve error in {uniform_wins} of12 combinations.</strong> The largest observed non-uniform curve gain is {summary.loc[summary.method.ne("uniform"), "aulc_gain_percent"].max():.1f}%. Confidence intervals below indicate whether the paired differences are distinguishable from zero.</p><h2>Comparison with uniform under the same skew</h2><img src="skew_acquisition_gains.png" alt="Acquisition gains by skew and seed size">
 <p>Entries are five-seed means of paired percentage improvements in normalized learning-curve area (trapezoidal RMSE over all11 checkpoints, including round0). Positive is better.
 {significant} of96 non-uniform comparisons have an unadjusted paired95% t interval entirely below zero for curve-error differences. These are exploratory comparisons without multiple-testing correction.</p>
 {best_table.to_html(index=False, border=0)}
