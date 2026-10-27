@@ -19,6 +19,7 @@ dependencies = ["alf-core",
 alf-icmd = "alf_icmd.runner:main"
 alf-icmd-report = "alf_icmd.report:main"
 alf-icmd-skew = "alf_icmd.skew_suite:main"
+alf-icmd-skew-report = "alf_icmd.skew_report:main"
 
 [build-system]
 requires = ["setuptools>=75"]

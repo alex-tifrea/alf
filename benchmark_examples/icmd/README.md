@@ -68,3 +68,36 @@ The baseline uses upstream ALF revision
 `2002936c623d11bf58f33b8cfb198ecc59b4c4aa`. See the
 [ALF paper](https://arxiv.org/pdf/2609.31197) and
 [activation-kernel PV paper](https://arxiv.org/pdf/2605.03964).
+
+## Skewed initialization suite
+
+Keep the IID output directory. Run the separate four-scenario suite:
+
+```bash
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 uv run alf-icmd-skew \
+  --source /absolute/path/to/dataset.parquet \
+  --output "$HOME/.reports/icmd-skewed" --workers 3
+uv run alf-icmd-skew-report \
+  --source /absolute/path/to/dataset.parquet \
+  --output "$HOME/.reports/icmd-skewed" \
+  --iid-report "$HOME/.reports/icmd-iid" \
+  --iid-url 'https://your-authorized-report-host/icmd-active-learning.html'
+```
+
+The four seed regions use a fixed 35th-percentile score threshold on training-pool
+inputs only, including ties: low aging temperature, high aging temperature
+(negative temperature score), low Cu+Mg+Zn sum, and a compact input region.
+The compact region ranks squared distances in standardized seven-feature space
+from the observed recipe nearest the coordinate-wise median. All remaining
+training-pool points remain acquirable. Representative validation/calibration
+sets stay unchanged, so this is a test of biased initial training labels rather
+than a setting where all available labeled information is biased.
+
+The suite locks all 540 campaigns before any test scoring. Each scenario repeats
+the same nine methods, three initial sizes, five seeds, and ten batches of50.
+`--report-only` on `alf-icmd-skew` rebuilds the per-scenario figures. The report
+builder audits region membership and exact equality of held-out IDs with the IID
+benchmark, then writes `icmd-active-learning-skewed-seeds.html` plus an index
+redirect. It reports paired gains against uniform within each skew and paired
+error penalties against IID at matching budgets. Generated reports remain outside
+this checkout.
